@@ -12,8 +12,19 @@ Certain operations can also be applied to all the shapes in a group by
 applying that operation to the group shape.
 
 
-Scope
------
+GroupShape-specific member scope
+--------------------------------
+
+* [X] property `GroupShape.shapes`::
+
+    Given a GroupShape object as group_shape
+    Then group_shape.shapes is a GroupShapes object
+
+* need to override shapes.title
+
+
+Base Property Scope
+-------------------
 
 * [X] Access a group shape::
 
@@ -22,7 +33,7 @@ Scope
 
   + Update `BaseShapeFactory()`.
 
-* [-] Group shape inherits `BaseShape` properties and behaviors.
+* [X] Group shape inherits `BaseShape` properties and behaviors.
 
   + [X] property `GroupShape.click_action`::
 

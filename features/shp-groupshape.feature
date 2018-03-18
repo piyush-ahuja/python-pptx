@@ -7,3 +7,8 @@ Feature: GroupShape properties and methods
   Scenario: GroupShape.shape_type
     Given a GroupShape object as shape
      Then shape.shape_type == MSO_SHAPE_TYPE.GROUP
+
+
+  Scenario: GroupShape.shapes
+    Given a GroupShape object as group_shape
+     Then group_shape.shapes is a GroupShapes object

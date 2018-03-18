@@ -1,22 +1,19 @@
 # encoding: utf-8
 
-"""
-Gherkin step implementations for shape-related features.
-"""
+"""Gherkin step implementations for shape-related features."""
 
-from __future__ import absolute_import, print_function
+from __future__ import (
+    absolute_import, division, print_function, unicode_literals
+)
 
 import hashlib
 
 from behave import given, when, then
 
 from pptx import Presentation
-from pptx.enum.chart import XL_CHART_TYPE
-from pptx.enum.shapes import (
-    MSO_CONNECTOR, MSO_SHAPE, MSO_SHAPE_TYPE, PP_MEDIA_TYPE
-)
+from pptx.enum.shapes import MSO_SHAPE, MSO_SHAPE_TYPE, PP_MEDIA_TYPE
 from pptx.action import ActionSetting
-from pptx.util import Emu, Inches
+from pptx.util import Emu
 
 from helpers import (
     cls_qname, saved_pptx_path, test_file, test_pptx, test_text
@@ -113,6 +110,13 @@ def given_a_GraphicFrame_object_as_shape(context):
     context.shape = sld.shapes[2]
 
 
+@given('a GroupShape object as group_shape')
+def given_a_GroupShape_object_as_group_shape(context):
+    prs = Presentation(test_pptx('shp-groupshape'))
+    sld = prs.slides[0]
+    context.group_shape = sld.shapes[0]
+
+
 @given('a GroupShape object as shape')
 def given_a_GroupShape_object_as_shape(context):
     prs = Presentation(test_pptx('shp-common-props'))
@@ -169,35 +173,6 @@ def given_a_shape_on_a_slide(context, shape_type):
     context.slide = sld
 
 
-@given('a SlideShapes object as shapes')
-def given_a_SlideShapes_object_as_shapes(context):
-    prs = Presentation(test_pptx('shp-shape-access'))
-    context.shapes = prs.slides[0].shapes
-
-
-@given('a SlideShapes object containing {a_or_no} movies')
-def given_a_SlideShapes_object_containing_a_or_no_movies(context, a_or_no):
-    pptx = {
-        'one or more': 'shp-movie-props',
-        'no':          'shp-shape-access',
-    }[a_or_no]
-    prs = Presentation(test_pptx(pptx))
-    context.prs = prs
-    context.shapes = prs.slides[0].shapes
-
-
-@given('a SlideShapes object containing 6 shapes')
-def given_a_SlideShapes_object_containing_6_shapes(context):
-    prs = Presentation(test_pptx('shp-shape-access'))
-    context.shapes = prs.slides[0].shapes
-
-
-@given('a SlideShapes object having a {type} shape at offset {idx}')
-def given_a_SlideShapes_obj_having_type_shape_at_off_idx(context, type, idx):
-    prs = Presentation(test_pptx('shp-shape-access'))
-    context.shapes = prs.slides[1].shapes
-
-
 @given('a textbox')
 def given_a_textbox(context):
     prs = Presentation(test_pptx('shp-common-props'))
@@ -212,24 +187,6 @@ def given_a_shape_of_known_position_and_size(context):
 
 
 # when ====================================================
-
-@when("I add a text box to the slide's shape collection")
-def when_I_add_a_text_box(context):
-    shapes = context.slide.shapes
-    x, y = (Inches(1.00), Inches(2.00))
-    cx, cy = (Inches(3.00), Inches(1.00))
-    sp = shapes.add_textbox(x, y, cx, cy)
-    sp.text = test_text
-
-
-@when("I add an auto shape to the slide's shape collection")
-def when_I_add_an_auto_shape(context):
-    shapes = context.slide.shapes
-    x, y = (Inches(1.00), Inches(2.00))
-    cx, cy = (Inches(3.00), Inches(4.00))
-    sp = shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, y, cx, cy)
-    sp.text = test_text
-
 
 @when("I assign 0.15 to shape.adjustments[0]")
 def when_I_assign_to_shape_adjustments(context):
@@ -252,34 +209,6 @@ def when_I_assign_builder_convert_to_shape_origin_x_y(context, x_str, y_str):
     builder = context.builder
     origin_x, origin_y = int(x_str), int(y_str)
     context.shape = builder.convert_to_shape(origin_x, origin_y)
-
-
-@when("I assign shapes.build_freeform() to builder")
-def when_I_assign_shapes_build_freeform_to_builder(context):
-    shapes = context.shapes
-    builder = shapes.build_freeform()
-    context.builder = builder
-
-
-@when("I assign shapes.build_freeform(scale=100.0) to builder")
-def when_I_assign_shapes_build_freeform_scale_to_builder(context):
-    shapes = context.shapes
-    builder = shapes.build_freeform(scale=100.0)
-    context.builder = builder
-
-
-@when("I assign shapes.build_freeform(scale=(200.0, 100.0)) to builder")
-def when_I_assign_shapes_build_freeform_scale_rectnglr_to_builder(context):
-    shapes = context.shapes
-    builder = shapes.build_freeform(scale=(200.0, 100.0))
-    context.builder = builder
-
-
-@when('I assign shapes.build_freeform(start_x=25, start_y=125) to builder')
-def when_I_assign_shapes_build_freeform_start_x_start_y_to_builder(context):
-    shapes = context.shapes
-    builder = shapes.build_freeform(25, 125)
-    context.builder = builder
 
 
 @when('I assign {value} to connector.begin_x')
@@ -348,31 +277,6 @@ def when_I_call_connector_begin_connect_picture_3(context):
 def when_I_call_connector_end_connect_picture_3(context):
     connector, picture = context.connector, context.picture
     connector.end_connect(picture, 3)
-
-
-@when('I call shapes.add_chart({type_}, chart_data)')
-def when_I_call_shapes_add_chart(context, type_):
-    chart_type = getattr(XL_CHART_TYPE, type_)
-    context.chart = context.shapes.add_chart(
-        chart_type, 0, 0, 0, 0, context.chart_data
-    ).chart
-
-
-@when('I call shapes.add_connector(MSO_CONNECTOR.STRAIGHT, 1, 2, 3, 4)')
-def when_I_call_shapes_add_connector(context):
-    context.connector = context.shapes.add_connector(
-        MSO_CONNECTOR.STRAIGHT, 1, 2, 3, 4
-    )
-
-
-@when('I call shapes.add_movie(file, x, y, cx, cy, poster_frame)')
-def when_I_call_shapes_add_movie(context):
-    shapes = context.shapes
-    x, y, cx, cy = Emu(2590800), Emu(571500), Emu(3962400), Emu(5715000)
-    context.movie = shapes.add_movie(
-        test_file('just-two-mice.mp4'), x, y, cx, cy,
-        test_file('just-two-mice.png')
-    )
 
 
 # then ====================================================
@@ -472,6 +376,12 @@ def then_connector_end_y_is_an_Emu_object_with_value_y(context, y):
     end_y = context.connector.end_y
     assert isinstance(end_y, Emu)
     assert end_y == int(y)
+
+
+@then('group_shape.shapes is a GroupShapes object')
+def then_group_shape_shapes_is_a_GroupShapes_object(context):
+    class_name = context.group_shape.shapes.__class__.__name__
+    assert class_name == 'GroupShapes', 'got %s' % class_name
 
 
 @then('movie is a Movie object')
