@@ -15,15 +15,93 @@ applying that operation to the group shape.
 Scope
 -----
 
-::
+* [X] Access a group shape::
 
-    Given a SlideShapes object as shapes containing a group shape
-     Then shapes[0] is a GroupShape object
+    Given a SlideShapes object as shapes having a group shape at offset 3
+     Then shapes[3] is a GroupShape object
 
-    * BaseShapeFactory() update
-    * add tests.shapes.test_group_shape
+  + Update `BaseShapeFactory()`.
 
-Group shape inherits `BaseShape` properties and behaviors:
+* [-] Group shape inherits `BaseShape` properties and behaviors.
+
+  + [X] property `GroupShape.click_action`::
+
+    Given a GroupShape object as shape
+     Then referencing shape.click_action raises TypeError
+
+  + [X] property `GroupShape.has_chart`::
+
+    Given a GroupShape object as shape
+     Then shape.has_chart is False
+
+  + [X] property `GroupShape.has_table`::
+
+    Given a GroupShape object as shape
+     Then shape.has_table is False
+
+  + [X] property `GroupShape.has_text_frame`::
+
+    Given a GroupShape object as shape
+     Then shape.has_text_frame is False
+
+  + [X] property `GroupShape.left, .top`::
+
+    Given a GroupShape object as shape
+     Then shape.left == 5454352
+      And shape.top == 4121696
+
+    Given a GroupShape object as shape
+     When I assign 4121696 to shape.left
+      And I assign 5454352 to shape.top
+     Then shape.left == 4121696
+      And shape.top == 5454352
+
+  + [X] property `GroupShape.name`::
+
+    Given a GroupShape object as shape
+     Then shape.name == 'Group 8'
+
+    Given a GroupShape object as shape
+     When I assign 'New Group 42' to shape.name
+     Then shape.name == 'New Group 42'
+
+  + [X] property `GroupShape.part`::
+
+    Given a GroupShape object on a slide as shape
+     Then shape.part is a SlidePart object
+      And shape.part is slide.part
+
+  + [X] property `GroupShape.rotation`::
+
+    Given a rotated GroupShape object as shape
+     Then shape.rotation == 40.0
+
+    Given a GroupShape object as shape
+     When I assign -5.2 to shape.rotation
+     Then shape.rotation == 354.8
+
+  + [X] property `GroupShape.shape_id`::
+
+    Given a group shape as shape
+     Then shape.shape_id == 9
+
+  + [X] property `GroupShape.shape_type`::
+
+    Given a GroupShape object as shape
+     Then shape.shape_type == MSO_SHAPE_TYPE.GROUP
+
+  + [X] property `GroupShape.width, .height`::
+
+    Given a GroupShape object as shape
+     Then shape.width == 914400
+     And shape.height == 914400
+
+    Given a GroupShape object as shape
+     When I assign 4121696 to shape.width
+      And I assign 5454352 to shape.height
+     Then shape.width == 4121696
+      And shape.height == 5454352
+
 
 * [ ] Apparently, a chart can be a member of a group, but a table cannot. Also
       `SmartArt` and placeholders can only appear at the top level of the slide
@@ -52,6 +130,10 @@ Group shape inherits `BaseShape` properties and behaviors:
       `SlideShapes` and `NotesSlideShapes`.
 
       Maybe `_BaseShapes.ph_basename` moves to `SlideShapes`.
+
+Create a group shape::
+
+    raise NotImplementedError
 
 
 Group shape also inherits from `SlideShapes`
