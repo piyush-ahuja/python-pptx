@@ -57,6 +57,7 @@ class _BaseShapes(ParentedElementProxy):
     Base class for a shape collection appearing in a slide-type object,
     include Slide, SlideLayout, and SlideMaster, providing common methods.
     """
+
     def __init__(self, spTree, parent):
         super(_BaseShapes, self).__init__(spTree, parent)
         self._spTree = spTree
@@ -426,7 +427,11 @@ def SlideShapeFactory(shape_elm, parent):
 
 
 class GroupShapes(_BaseShapes):
-    """A shape that acts as a container for other shapes."""
+    """The sequence of child shapes belonging to a group shape."""
+
+    def __init__(self, grpSp, parent):
+        super(GroupShapes, self).__init__(grpSp, parent)
+        self._grpSp = grpSp
 
     def add_connector(self, connector_type, begin_x, begin_y, end_x, end_y):
         """Add a newly created connector shape to the end of this shape tree.
@@ -439,7 +444,41 @@ class GroupShapes(_BaseShapes):
         cxnSp = self._add_cxnSp(
             connector_type, begin_x, begin_y, end_x, end_y
         )
+        self._recalculate_extents()
         return self._shape_factory(cxnSp)
+
+    def add_shape(self, autoshape_type_id, left, top, width, height):
+        """Return |Shape| object newly appended to this shape tree.
+
+        Auto shape is of type specified by *autoshape_type_id* (like
+        ``MSO_SHAPE.RECTANGLE``) and of specified size at specified position.
+        """
+        autoshape_type = AutoShapeType(autoshape_type_id)
+        sp = self._add_sp_from_autoshape_type(
+            autoshape_type, left, top, width, height
+        )
+        self._recalculate_extents()
+        return self._shape_factory(sp)
+
+    def add_textbox(self, left, top, width, height):
+        """
+        Add text box shape of specified size at specified position on slide.
+        """
+        sp = self._add_textbox_sp(left, top, width, height)
+        self._recalculate_extents()
+        return self._shape_factory(sp)
+
+    def index(self, shape):
+        """Return int index of *shape* in this sequence.
+
+        Raises |ValueError| if *shape* is not in the collection.
+        """
+        # ---note this compares *elements*, not proxy objects---
+        shape_elm = shape.element
+        for idx, elm in enumerate(self._spTree.iter_shape_elms()):
+            if elm is shape_elm:
+                return idx
+        raise ValueError('shape not in collection')
 
     def _add_cxnSp(self, connector_type, begin_x, begin_y, end_x, end_y):
         """Return a newly-added `p:cxnSp` element as specified.
@@ -459,8 +498,86 @@ class GroupShapes(_BaseShapes):
             id_, name, connector_type, x, y, cx, cy, flipH, flipV
         )
 
+    def _add_sp_from_autoshape_type(self, autoshape_type, x, y, cx, cy):
+        """Return newly-added `p:sp` element as specified.
 
-class SlideShapes(GroupShapes):
+        `p:sp` element is of *autoshape_type* at position (x, y) and of size
+        (cx, cy).
+        """
+        id_ = self._next_shape_id
+        name = '%s %d' % (autoshape_type.basename, id_-1)
+        sp = self._spTree.add_autoshape(
+            id_, name, autoshape_type.prst, x, y, cx, cy
+        )
+        return sp
+
+    def _add_textbox_sp(self, x, y, cx, cy):
+        """
+        Return a newly-added textbox ``<p:sp>`` element at position (x, y)
+        and of size (cx, cy).
+        """
+        id_ = self._next_shape_id
+        name = 'TextBox %d' % (id_-1)
+        sp = self._spTree.add_textbox(id_, name, x, y, cx, cy)
+        return sp
+
+    @property
+    def _max_child_x(self):
+        """Rightmost x-position of child shapes."""
+        child_shape_elms = list(self._grpSp.iter_shape_elms())
+        if not child_shape_elms:
+            return 0
+        return max([(shape.x + shape.cx) for shape in child_shape_elms])
+
+    @property
+    def _max_child_y(self):
+        """Bottommost y-position of child shapes."""
+        child_shape_elms = list(self._grpSp.iter_shape_elms())
+        if not child_shape_elms:
+            return 0
+        return max([(shape.y + shape.cy) for shape in child_shape_elms])
+
+    @property
+    def _min_child_x(self):
+        """Leftmost x-position of child shapes."""
+        child_shape_elms = list(self._grpSp.iter_shape_elms())
+        if not child_shape_elms:
+            return 0
+        return min([shape.x for shape in child_shape_elms])
+
+    @property
+    def _min_child_y(self):
+        """Topmost y-position of child shapes."""
+        child_shape_elms = list(self._grpSp.iter_shape_elms())
+        if not child_shape_elms:
+            return 0
+        return min([shape.y for shape in child_shape_elms])
+
+    def _recalculate_extents(self):
+        """Adjust position and size to incorporate all contained shapes.
+
+        This would typically be called when a contained shape is added,
+        removed, or its position or size updated.
+        """
+        grpSp = self._grpSp
+
+        min_x = self._min_child_x
+        min_y = self._min_child_y
+        cx = self._max_child_x - min_x
+        cy = self._max_child_y - min_y
+
+        grpSp.x = min_x
+        grpSp.y = min_y
+        grpSp.cx = cx
+        grpSp.cy = cy
+
+        grpSp.chOff.x = min_x
+        grpSp.chOff.y = min_y
+        grpSp.chExt.cx = cx
+        grpSp.chExt.cy = cy
+
+
+class SlideShapes(_BaseShapes):
     """Sequence of shapes appearing on a slide.
 
     The first shape in the sequence is the backmost in z-order and the last
@@ -481,6 +598,30 @@ class SlideShapes(GroupShapes):
         rId = self.part.add_chart_part(chart_type, chart_data)
         graphic_frame = self._add_chart_graphic_frame(rId, x, y, cx, cy)
         return graphic_frame
+
+    def add_connector(self, connector_type, begin_x, begin_y, end_x, end_y):
+        """Add a newly created connector shape to the end of this shape tree.
+
+        *connector_type* is a member of the :ref:`MsoConnectorType`
+        enumeration and the end-point values are specified as EMU values. The
+        returned connector is of type *connector_type* and has begin and end
+        points as specified.
+        """
+        cxnSp = self._add_cxnSp(
+            connector_type, begin_x, begin_y, end_x, end_y
+        )
+        return self._shape_factory(cxnSp)
+
+    def add_group_shape(self):
+        """Return a GroupShape object newly appended to this shape tree.
+
+        The group shape is empty and must be populated with shapes using
+        methods on its shape tree, available on its `.shapes` property. The
+        position and extents of the group shape are determined by the shapes
+        it contains.
+        """
+        grpSp = self._spTree.add_grpSp()
+        return self._shape_factory(grpSp)
 
     def add_movie(self, movie_file, left, top, width, height,
                   poster_frame_image=None, mime_type=CT.VIDEO):
@@ -524,8 +665,9 @@ class SlideShapes(GroupShapes):
         return self._shape_factory(pic)
 
     def add_shape(self, autoshape_type_id, left, top, width, height):
-        """
-        Add auto shape of type specified by *autoshape_type_id* (like
+        """Return |Shape| object newly appended to this shape tree.
+
+        Auto shape is of type specified by *autoshape_type_id* (like
         ``MSO_SHAPE.RECTANGLE``) and of specified size at specified position.
         """
         autoshape_type = AutoShapeType(autoshape_type_id)
@@ -593,10 +735,11 @@ class SlideShapes(GroupShapes):
             self.clone_placeholder(placeholder)
 
     def index(self, shape):
+        """Return int index of *shape* in this sequence.
+
+        Raises |ValueError| if *shape* is not in the collection.
         """
-        Return the index of *shape* in this sequence, raising |ValueError| if
-        *shape* is not in the collection.
-        """
+        # ---note this compares *elements*, not proxy objects---
         shape_elm = shape.element
         for idx, elm in enumerate(self._spTree.iter_shape_elms()):
             if elm is shape_elm:
@@ -645,6 +788,24 @@ class SlideShapes(GroupShapes):
         graphic_frame = self._shape_factory(graphicFrame)
         return graphic_frame
 
+    def _add_cxnSp(self, connector_type, begin_x, begin_y, end_x, end_y):
+        """Return a newly-added `p:cxnSp` element as specified.
+
+        The `p:cxnSp` element is for a connector of *connector_type*
+        beginning at (*begin_x*, *begin_y*) and extending to
+        (*end_x*, *end_y*).
+        """
+        id_ = self._next_shape_id
+        name = 'Connector %d' % (id_-1)
+
+        flipH, flipV = begin_x > end_x, begin_y > end_y
+        x, y = min(begin_x, end_x), min(begin_y, end_y)
+        cx, cy = abs(end_x - begin_x), abs(end_y - begin_y)
+
+        return self._spTree.add_cxnSp(
+            id_, name, connector_type, x, y, cx, cy, flipH, flipV
+        )
+
     def _add_graphicFrame_containing_table(self, rows, cols, x, y, cx, cy):
         """
         Return a newly added ``<p:graphicFrame>`` element containing a table
@@ -676,9 +837,10 @@ class SlideShapes(GroupShapes):
         return pic
 
     def _add_sp_from_autoshape_type(self, autoshape_type, x, y, cx, cy):
-        """
-        Return a newly-added ``<p:sp>`` element for a shape of
-        *autoshape_type* at position (x, y) and of size (cx, cy).
+        """Return newly-added `p:sp` element as specified.
+
+        `p:sp` element is of *autoshape_type* at position (x, y) and of size
+        (cx, cy).
         """
         id_ = self._next_shape_id
         name = '%s %d' % (autoshape_type.basename, id_-1)

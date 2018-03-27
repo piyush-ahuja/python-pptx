@@ -261,6 +261,11 @@ def when_I_assign_value_to_shape_width(context, value):
     context.shape.width = int(value)
 
 
+@when('I assign shapes.add_group_shape() to shape')
+def when_I_assign_shapes_add_group_shape_to_shape(context):
+    context.shape = context.shapes.add_group_shape()
+
+
 @when('I call builder.add_line_segments([(100, 25), (25, 100)])')
 def when_I_call_builder_add_line_segments_100_25_25_100(context):
     builder = context.builder
@@ -428,6 +433,15 @@ def then_movie_width_movie_height_eq_cx_cy(context):
     movie = context.movie
     size = movie.width, movie.height
     assert size == (Emu(3962400), Emu(5715000)), 'got %s' % size
+
+
+@then('shape is a {clsname} object')
+def then_shape_is_a_clsname_object(context, clsname):
+    shape = context.shape
+    actual_class_name = shape.__class__.__name__
+    assert actual_class_name == clsname, (
+        'shape is a %s object' % actual_class_name
+    )
 
 
 @then('shape.adjustments[0] is 0.15')

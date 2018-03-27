@@ -43,4 +43,4 @@ class GroupShape(BaseShape):
         and provides methods for adding new ones.
         """
         from pptx.shapes.shapetree import GroupShapes
-        return GroupShapes(self._element, self._parent)
+        return GroupShapes(self._element, self)
